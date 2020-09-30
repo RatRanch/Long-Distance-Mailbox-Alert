@@ -1,10 +1,10 @@
-// Feather9x_TX
+// Adapted from Adafruit Feather9x_TX example
 // -*- mode: C++ -*-
-// Example sketch showing how to create a simple messaging client (transmitter)
-// with the RH_RF95 class. RH_RF95 class does not provide for addressing or
-// reliability, so you should only use RH_RF95 if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example Feather9x_RX
+/*
+* LoRa Mailbox Transmitter
+* Transmits contact closure status and battery voltage when contact closure changes
+* Project details at http://jimandnoreen.com
+*/
 
 #include <SPI.h>
 #include <RH_RF95.h>
