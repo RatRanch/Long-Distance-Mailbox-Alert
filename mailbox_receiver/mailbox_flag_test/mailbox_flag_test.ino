@@ -33,7 +33,6 @@ void setup() {
   pinMode(SERVO_PIN, OUTPUT);
   
   // write flag to down position
-
   moveServo(FLAG_DOWN);
   flagPosition = 0; //Down
 
@@ -86,9 +85,10 @@ void moveServo(int lenMicroSecondsOfPulse) {
   // 1.0 ms at the start of the pulse will turn the servo to the 0 degree position
   // 1.5 ms at the start of the pulse will turn the servo to the 90 degree position 
   // 2.0 ms at the start of the pulse will turn the servo to the 180 degree position 
-  // Turn voltage high to start the period and pulse
+  // Turn pin high to start the period and pulse
 
   // The servo up and down positions tend to drift if we dont send each positioning pulse multiple times
+  // You may need to increase or decrease this value
   int numPulses = 10; // Number of positioning pulses to send
   int pulseCtr = 0;
 
