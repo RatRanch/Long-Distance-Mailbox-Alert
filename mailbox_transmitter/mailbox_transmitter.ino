@@ -9,7 +9,7 @@
 #include <SPI.h>
 #include <RH_RF95.h>
 
-// #define DEBUG  // uncomment to enable serial messages
+// #define DEBUG  // Uncomment to enable serial messages.  Leave commented out for normal operation.
 
 // for feather32u4
 #define RFM95_CS 8
@@ -66,7 +66,7 @@ void setup()
 
   delay(100);
 #if defined(DEBUG)
-  Serial.println("Feather LoRa TX Test!");
+  Serial.println("Mailbox TX Test!");
 #endif
   // manual reset
   digitalWrite(RFM95_RST, LOW);
@@ -85,7 +85,7 @@ void setup()
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM
   if (!rf95.setFrequency(RF95_FREQ)) {
 #if defined(DEBUG)
-    //Serial.println("setFrequency failed");
+    Serial.println("setFrequency failed");
 #endif
     while (1);
   }

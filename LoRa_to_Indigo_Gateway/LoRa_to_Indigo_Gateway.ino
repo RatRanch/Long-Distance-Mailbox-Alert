@@ -12,6 +12,8 @@
 /*
  * This sketch waits for serial input from the LoRa receiver and
  * updates the Indigo variables mailboxOpen and mailboxBattVoltage 
+ * 
+ * It could easily be adapted to interfacing with other servers that support REST
  */
 
 #include <ESP8266WiFi.h>
@@ -20,21 +22,21 @@
 
 
 // Replace with your WiFi ID and password
-#ifndef STASSID
 #define STASSID "YOUR WIFI SSID"
 #define STAPSK  "WIFI PASSWORD"
-#endif
+
+// Replace with your Indigo credentials and server IP
+#define INDIGO_USER "username"
+#define INDIGO_PASS "password"
+#define INDIGO_IP   "192.168.x.x"
 
 const char* ssid = STASSID;
 const char* ssidPassword = STAPSK;
-
-// Replace with your Indigo credentials and server IP
-const char *username = "username";
-const char *password = "password";
-const char *server = "192.168.0.10";
+const char* username = INDIGO_USER;
+const char* password = INDIGO_PASS;
+const char* server = INDIGO_IP;
 
 String uri = "";
-
 
 String exractParam(String& authReq, const String& param, const char delimit) {
   int _begin = authReq.indexOf(param);
@@ -176,7 +178,7 @@ void updateIndigo() {
 
   const int httpPort = 8176;
 
-  http.begin(String(server), httpPort, String(uri)); //RAT
+  http.begin(String(server), httpPort, String(uri)); //JL
 
   const char *keys[] = {"WWW-Authenticate"};
   http.collectHeaders(keys, 1);
@@ -199,7 +201,7 @@ void updateIndigo() {
     // Need to add a delay or it doesn't have enough time to close the first connection
     delay(100);
     
-    http.begin(String(server), httpPort, String(uri)); //RAT
+    http.begin(String(server), httpPort, String(uri)); //JL
     http.addHeader("Authorization", authorization);
 
     Serial.println("We added the Authorization header");

@@ -1,10 +1,18 @@
-// Feather9x_RX
+// mailbox_receiver
 // -*- mode: C++ -*-
-// Example sketch showing how to create a simple messaging client (receiver)
-// with the RH_RF95 class. RH_RF95 class does not provide for addressing or
-// reliability, so you should only use RH_RF95 if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example Feather9x_TX
+// This is part of the Long Distance Mailbox Alert project:  http://jimandnoreen.com
+// It is designed to work with mailbox_transmitter, and optionally, LoRa_to_Indigo_Gateway
+//
+// Based on an example for the LoRa Feather board by Adafruit.com
+//
+// You can attach a switch to pins 5 and 3V3
+// Each press of the switch should toggle the flag between up and down positions
+// Resetting the board will always move the flag to down position
+//
+// You can also attach a servo to pin 11 to move a flag (or something else)
+//
+// Received packets are forwarded to the hardware serial UART on pin 1 (TX).  You can attach
+// the LoRa_to_Indigo_Gateway from this project or any other serial device
 
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -39,30 +47,30 @@
 #define RFM95_INT     6    // "D"
 */
 
-#if defined(ESP8266)
+//#if defined(ESP8266)
   /* for ESP w/featherwing */ 
-  #define RFM95_CS  2    // "E"
-  #define RFM95_RST 16   // "D"
-  #define RFM95_INT 15   // "B"
+//  #define RFM95_CS  2    // "E"
+//  #define RFM95_RST 16   // "D"
+//  #define RFM95_INT 15   // "B"
 
-#elif defined(ESP32)  
+//#elif defined(ESP32)  
   /* ESP32 feather w/wing */
-  #define RFM95_RST     27   // "A"
-  #define RFM95_CS      33   // "B"
-  #define RFM95_INT     12   //  next to A
+//  #define RFM95_RST     27   // "A"
+//  #define RFM95_CS      33   // "B"
+//  #define RFM95_INT     12   //  next to A
 
-#elif defined(NRF52)  
+//#elif defined(NRF52)  
   /* nRF52832 feather w/wing */
-  #define RFM95_RST     7   // "A"
-  #define RFM95_CS      11   // "B"
-  #define RFM95_INT     31   // "C"
+//  #define RFM95_RST     7   // "A"
+//  #define RFM95_CS      11   // "B"
+//  #define RFM95_INT     31   // "C"
   
-#elif defined(TEENSYDUINO)
+//#elif defined(TEENSYDUINO)
   /* Teensy 3.x w/wing */
-  #define RFM95_RST     9   // "A"
-  #define RFM95_CS      10   // "B"
-  #define RFM95_INT     4    // "C"
-#endif
+//  #define RFM95_RST     9   // "A"
+//  #define RFM95_CS      10   // "B"
+//  #define RFM95_INT     4    // "C"
+//#endif
 
 
 // Change to 434.0 or other frequency, must match RX's freq!
@@ -71,22 +79,48 @@
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-// Blinky on receipt
-#define LED 13
+// pin used to control the servo
+#define SERVO_PIN 11
+
+// Flag's up position, in pulse duration
+// You may need to tweak this
+#define FLAG_UP 1500
+
+// Flag's down position, in pulse duration
+// You may need to tweak this
+#define FLAG_DOWN 500
+
+#define LED 13 // Attach external LED to pin 13 if desired
+
+const int buttonPin = 5;    // Flag test button
+int ledState = LOW;         // the current state of the output pin
+int buttonState = LOW;  // variable for reading the pushbutton status
+int lastButtonState = LOW;   // the previous reading from the input pin
+int flagPosition = 0;
 
 void setup()
 {
-  pinMode(LED, OUTPUT);
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
+
+  pinMode(SERVO_PIN, OUTPUT);
+  
+  // write flag to down position
+  moveServo(FLAG_DOWN);
+  flagPosition = 0; //Down
+
+  pinMode(LED, OUTPUT);
+  pinMode(buttonPin, INPUT);
+
+  lastButtonState = digitalRead(buttonPin);
+  // turn LED off:
+  digitalWrite(LED, LOW); 
 
   Serial.begin(115200);
   //while (!Serial) {
   //  delay(1);
   //}
   delay(100);
-
-  Serial.println("Feather LoRa RX Test!");
 
   // manual reset
   digitalWrite(RFM95_RST, LOW);
@@ -115,11 +149,21 @@ void setup()
   // you can set transmitter powers from 5 to 23 dBm:
   rf95.setTxPower(23, false);
 
-  Serial1.begin(115200); // Pins 0 and 1
+  Serial1.begin(115200); // Pins 0 and 1, not USB
 }
 
 void loop()
 {
+  // read the state of the test pushbutton value:
+  buttonState = digitalRead(buttonPin);
+
+  // If the switch changed:
+  if (buttonState != lastButtonState) {
+    if (buttonState == HIGH){
+      toggleFlag();
+    }
+  }
+  lastButtonState = buttonState;  
   if (rf95.available())
   {
     // Should be a message for us now
@@ -128,11 +172,12 @@ void loop()
 
     if (rf95.recv(buf, &len))
     {
-      digitalWrite(LED, HIGH);
+
+      //digitalWrite(LED, HIGH);
       RH_RF95::printBuffer("Received: ", buf, len);
       Serial.print("Got: ");
       Serial.println((char*)buf);
-       Serial.print("RSSI: ");
+      Serial.print("RSSI: ");
       Serial.println(rf95.lastRssi(), DEC);
 
       Serial1.println((char*)buf); // Forward the packet to the WiFi bridge
@@ -144,11 +189,66 @@ void loop()
       Serial.println("Sent a reply");
       */
       
-      digitalWrite(LED, LOW);
+      if (buf[0] == 49) {  // ASCII Dec 49 = "1"; means mailbox just opened
+        // Move the flag to the other position
+        Serial.print("Toggling flag position");
+        toggleFlag();
+      }
     }
     else
     {
       Serial.println("Receive failed");
     }
+  }
+}
+void toggleFlag() {
+  if (flagPosition == 0) {
+      Serial.println("Flag up!");
+      // move flag up
+      moveServo(FLAG_UP);
+      flagPosition = 1;
+      // turn LED on:
+      digitalWrite(LED, HIGH);
+  }
+  else {
+      Serial.println("Flag Down");
+      // turn LED off:
+      digitalWrite(LED, LOW); 
+      moveServo(FLAG_DOWN);
+      flagPosition = 0;         
+  }
+}
+
+// The reason we're not just using Servo.h is that the Radiohead library
+// and servo library both use timer 1.  We could modify one of these libraries
+// to use timer 3 instead but for this simple up/down application it's less
+// fuss to just do it in software.
+
+void moveServo(int lenMicroSecondsOfPulse) {
+  int lenMicroSecondsOfPeriod   = 20 * 1000; // 20 milliseconds (ms)
+  // Servos work by sending a 20 ms pulse.  
+  // 1.0 ms at the start of the pulse will turn the servo to the 0 degree position
+  // 1.5 ms at the start of the pulse will turn the servo to the 90 degree position 
+  // 2.0 ms at the start of the pulse will turn the servo to the 180 degree position 
+  // Turn pin high to start the period and pulse
+
+  // The servo up and down positions tend to drift if we dont send each positioning pulse multiple times
+  // You may need to increase or decrease this value
+  int numPulses = 10; // Number of positioning pulses to send
+  int pulseCtr = 0;
+
+  while (pulseCtr < numPulses) {
+    digitalWrite(SERVO_PIN, HIGH);
+    
+    // Delay for the length of the pulse
+    delayMicroseconds(lenMicroSecondsOfPulse);
+    
+    // Turn the voltage low for the remainder of the pulse
+    digitalWrite(SERVO_PIN, LOW);
+    
+    // Delay this loop for the remainder of the period so we don't
+    // send the next signal too soon or too late
+    delayMicroseconds(lenMicroSecondsOfPeriod - lenMicroSecondsOfPulse);
+    pulseCtr++;
   }
 }
