@@ -179,7 +179,7 @@ void loop()
       Serial.println((char*)buf);
       Serial.print("RSSI: ");
       Serial.println(rf95.lastRssi(), DEC);
-
+      
       Serial1.println((char*)buf); // Forward the packet to the WiFi bridge
       /*
       // Send a reply
@@ -188,8 +188,12 @@ void loop()
       rf95.waitPacketSent();
       Serial.println("Sent a reply");
       */
+
+      // The status packet will have the contact state (0 or 1), followed by a space, then voltage
+      // Example:  "0 4.20"
+      // So some rudimentary security to reject rogue packets
       
-      if (buf[0] == 49) {  // ASCII Dec 49 = "1"; means mailbox just opened
+      if (buf[0] == 49 && buf[1] == 32 && buf[3] == 46 && buf[6] == 0) {  // ASCII Dec 49 = "1"; means mailbox just opened
         // Move the flag to the other position
         Serial.print("Toggling flag position");
         toggleFlag();
